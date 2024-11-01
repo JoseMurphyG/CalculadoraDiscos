@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gráficas 2D y 3D</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f4f8;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        h2 {
+            color: #333;
+        }
+        .calculator {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+        }
+        .calculator label {
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .calculator input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-top: 5px;
+            margin-bottom: 10px;
+        }
+        .calculator button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            width: 100%;
+        }
+        .calculator button:hover {
+            background-color: #0056b3;
+        }
+        #resultado {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #333;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        #contenedor3D {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.6.4/math.min.js"></script>
+</head>
+<body>
+<h2>Visualización de Gráficas</h2>
+<div class="calculator">
+    <label>Función:</label>
+    <input type="text" id="funcion" placeholder="Ingrese la función (ej. sqrt(x))">
+    <label>Límite inferior (a):</label>
+    <input type="number" id="a" value="0" placeholder="Límite inferior">
+    <label>Límite superior (b):</label>
+    <input type="number" id="b" value="4" placeholder="Límite superior">
+    <button id="calcularBtn"><i class="fas fa-calculator"></i> Calcular</button>
+    <button id="limpiarBtn"><i class="fas fa-eraser"></i> Limpiar</button>
+    <div id="resultado">Resultado: </div>
+</div>
+
+<!-- Contenedor para la gráfica 2D -->
+<h3>Gráfica 2D</h3>
+<canvas id="grafico2D" style="max-width: 600px;"></canvas>
+
+<!-- Contenedor para la gráfica 3D -->
+<h3>Gráfica 3D</h3>
+<div id="contenedor3D" style="width: 600px; height: 400px;"></div>
+
+<script>
+    let chart; // Variable global para almacenar el gráfico 2D
+    let renderer3D; // Variable global para almacenar el renderizador 3D
+
+    document.getElementById("calcularBtn").addEventListener("click", function() {
+        const funcion = document.getElementById("funcion").value;
+        const a = parseFloat(document.getElementById("a").value);
+        const b = parseFloat(document.getElementById("b").value);
+
+        try {
+            const resultado = calcularVolumen(funcion, a, b, 100);
+            document.getElementById("resultado").innerText = "Resultado: " + resultado;
+
+            // Llamada para mostrar ambas gráficas
+            mostrarGrafica2D(funcion, a, b);
+            mostrarGrafica3D(funcion, a, b);
+
+        } catch (error) {
+            document.getElementById("resultado").innerText = "Error en el cálculo: " + error.message;
+        }
+    });
+
+    document.getElementById("limpiarBtn").addEventListener("click", function() {
+        document.getElementById("funcion").value = "";
+        document.getElementById("a").value = "0";
+        document.getElementById("b").value = "4";
+        document.getElementById("resultado").innerText = "Resultado: ";
+        limpiarGraficas();
+    });
+
+    function calcularVolumen(funcion, a, b, numIntervalos) {
+        const dx = (b - a) / numIntervalos;
+        let suma = 0;
+
+        for (let i = 0; i < numIntervalos; i++) {
+            const x = a + i * dx;
+            const fX = evaluarFuncion(funcion, x);
+            suma += Math.PI * fX * fX * dx;
+        }
+
+        return suma;
+    }
+
+    function evaluarFuncion(funcion, x) {
+        return math.evaluate(funcion.replace(/x/g, `(${x})`));
+    }
+
+    function mostrarGrafica2D(funcion, a, b) {
+        const ctx = document.getElementById("grafico2D").getContext("2d");
+        limpiarGraficas();
+
+        const data = {
+            labels: [],
+            datasets: [{
+                label: 'f(x)',
+                data: [],
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 2,
+                fill: false,
+            }]
+        };
+
+        const numPuntos = 100;
+        const dx = (b - a) / numPuntos;
+
+        for (let i = 0; i <= numPuntos; i++) {
+            const x = a + i * dx;
+            const fX = evaluarFuncion(funcion, x);
+            data.labels.push(x.toFixed(2));
+            data.datasets[0].data.push(fX);
+        }
+
+        if (chart) {
+            chart.destroy();
+        }
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: data,
+            options: {
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'x'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'f(x)'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function limpiarGraficas() {
+        if (chart) {
+            chart.destroy();
+            chart = null;
+        }
+
+        if (renderer3D) {
+            renderer3D.dispose();
+            renderer3D.domElement.remove();
+            renderer3D = null;
+        }
+    }
+
+    function mostrarGrafica3D(funcion, a, b) {
+        const contenedor3D = document.getElementById("contenedor3D");
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, contenedor3D.clientWidth / contenedor3D.clientHeight, 0.1, 1000);
+        renderer3D = new THREE.WebGLRenderer();
+        renderer3D.setSize(contenedor3D.clientWidth, contenedor3D.clientHeight);
+        contenedor3D.appendChild(renderer3D.domElement);
+
+        const material = new THREE.MeshBasicMaterial({ color: 0x0077ff, wireframe: true });
+
+        const points = [];
+        const numPoints = 50;
+        const dx = (b - a) / numPoints;
+
+        for (let i = 0; i <= numPoints; i++) {
+            const x = a + i * dx;
+            const y = evaluarFuncion(funcion, x);
+            points.push(new THREE.Vector2(y, x));
+        }
+
+        const geometry = new THREE.LatheGeometry(points, 30);
+        const lathe = new THREE.Mesh(geometry, material);
+        scene.add(lathe);
+
+        camera.position.z = 10;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            lathe.rotation.y += 0.01;
+            renderer3D.render(scene, camera);
+        }
+        animate();
+    }
+</script>
+</body>
+</html>
